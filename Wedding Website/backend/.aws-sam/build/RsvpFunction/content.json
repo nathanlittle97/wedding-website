@@ -1,0 +1,88 @@
+{
+  "home": {
+    "names": ["Nathan", "& Ashling"],
+    "date": "Saturday 2 October 2027",
+    "place": "Parr Green Hall, near Malpas, Cheshire",
+    "slides": [
+      { "src": "images/slide-1.svg", "alt": "Placeholder photo 1" },
+      { "src": "images/slide-2.svg", "alt": "Placeholder photo 2" },
+      { "src": "images/slide-3.svg", "alt": "Placeholder photo 3" }
+    ]
+  },
+  "events": [
+    {
+      "id": "welcome",
+      "order": 1,
+      "name": "Welcome meal",
+      "date": "",
+      "time": "",
+      "place": "",
+      "description": ""
+    },
+    {
+      "id": "wedding",
+      "order": 2,
+      "name": "The wedding",
+      "date": "Saturday 2 October 2027",
+      "time": "",
+      "place": "Parr Green Hall, near Malpas, Cheshire",
+      "description": ""
+    },
+    {
+      "id": "brunch",
+      "order": 3,
+      "name": "Brunch",
+      "date": "Sunday 3 October 2027",
+      "time": "",
+      "place": "",
+      "description": ""
+    }
+  ],
+  "accommodation": {
+    "venue": {
+      "name": "Parr Green Hall",
+      "address": ["Parr Green Hall", "near Malpas", "Cheshire"],
+      "postcode": "",
+      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Parr+Green+Hall+Malpas+Cheshire"
+    },
+    "sections": [
+      {
+        "title": "Parking",
+        "paragraphs": ["Parking details will be added here."],
+        "items": []
+      },
+      {
+        "title": "Taxis",
+        "paragraphs": ["Local taxi suggestions will be added here."],
+        "items": []
+      },
+      {
+        "title": "Hotels",
+        "paragraphs": ["Places to stay will be added here."],
+        "items": []
+      }
+    ]
+  },
+  "faqs": [
+    {
+      "q": "How do I reply?",
+      "a": "Use the RSVP page. You'll see only the events you're invited to, and you can tell us your dietary requirements and anything else we should know."
+    },
+    {
+      "q": "How do I reply for my partner or family?",
+      "a": "Each person replies separately. After sending your own reply, use \"RSVP for another guest\" at the bottom of the RSVP page and enter their name."
+    },
+    {
+      "q": "What if my plans change?",
+      "a": "Send the RSVP form again. Your latest reply replaces the earlier one."
+    },
+    {
+      "q": "What should I wear?",
+      "a": "Details to follow."
+    },
+    {
+      "q": "Are children welcome?",
+      "a": "Details to follow."
+    }
+  ]
+}

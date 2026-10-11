@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Nathan and Ashling wedding website (S3 + CloudFront + Lambda + DynamoDB)
+
+Parameters:
+  SitePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 6
+    Description: The single password all guests use to enter the site.
+  CustomDomain:
+    Type: String
+    Default: ""
+    Description: Optional. A custom domain (e.g. www.example.com) to allow for RSVP submissions once you attach it to CloudFront.
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref CustomDomain, ""]]
+
+Resources:
+  # ---------- Static site hosting ----------
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SiteOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  SiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: site
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: site
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          # Managed-CachingOptimized
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${SiteBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${SiteDistribution}"
+
+  # ---------- RSVP storage and API ----------
+  RsvpTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: guest
+          AttributeType: S
+      KeySchema:
+        - AttributeName: guest
+          KeyType: HASH
+
+  RsvpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: rsvp/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RsvpTable
+          SITE_PASSWORD: !Ref SitePassword
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RsvpTable
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - !Sub "https://${SiteDistribution.DomainName}"
+            - !If [HasCustomDomain, !Sub "https://${CustomDomain}", !Ref AWS::NoValue]
+          AllowMethods: [GET, POST]
+          AllowHeaders: [content-type, authorization]
+          MaxAge: 86400
+
+Outputs:
+  SiteUrl:
+    Description: Your wedding website address
+    Value: !Sub "https://${SiteDistribution.DomainName}"
+  BucketName:
+    Description: Upload the contents of the site folder here
+    Value: !Ref SiteBucket
+  DistributionId:
+    Description: Used to refresh the CDN cache after updating the site
+    Value: !Ref SiteDistribution
+  ApiUrl:
+    Description: Paste this into site/config.js
+    Value: !GetAtt RsvpFunctionUrl.FunctionUrl
+  TableName:
+    Description: DynamoDB table holding the RSVPs
+    Value: !Ref RsvpTable

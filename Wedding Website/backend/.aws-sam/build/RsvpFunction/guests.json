@@ -1,0 +1,7 @@
+{
+  "guests": [
+    { "firstName": "Alex", "lastName": "Example", "events": ["welcome", "wedding", "brunch"] },
+    { "firstName": "Sam", "lastName": "Sample", "events": ["wedding"] },
+    { "firstName": "Jo", "lastName": "Placeholder", "events": ["wedding", "brunch"] }
+  ]
+}
