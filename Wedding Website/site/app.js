@@ -26,7 +26,7 @@
       else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
       else node.setAttribute(k, v === true ? "" : v);
     }
-    kids.flat().forEach((c) => {
+    kids.flat(Infinity).forEach((c) => {
       if (c != null && c !== false) node.append(c.nodeType ? c : document.createTextNode(c));
     });
     return node;
