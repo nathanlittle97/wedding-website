@@ -8,6 +8,14 @@ Parameters:
     NoEcho: true
     MinLength: 6
     Description: The single password all guests use to enter the site.
+  NotifyEmail:
+    Type: String
+    MinLength: 3
+    Description: Your email address. You get a message for each RSVP (AWS emails you a link to confirm after deploying).
+  SenderEmail:
+    Type: String
+    Default: ""
+    Description: Optional. An SES-verified address that sends confirmation emails to guests. Leave empty to turn guest emails off.
   CustomDomain:
     Type: String
     Default: ""
@@ -85,6 +93,13 @@ Resources:
         - AttributeName: guest
           KeyType: HASH
 
+  RsvpTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref NotifyEmail
+
   RsvpFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -98,9 +113,21 @@ Resources:
         Variables:
           TABLE_NAME: !Ref RsvpTable
           SITE_PASSWORD: !Ref SitePassword
+          TOPIC_ARN: !Ref RsvpTopic
+          SENDER_EMAIL: !Ref SenderEmail
+          SITE_URL: !Sub "https://${SiteDistribution.DomainName}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RsvpTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt RsvpTopic.TopicName
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  "ses:FromAddress": !Ref SenderEmail
       FunctionUrlConfig:
         AuthType: NONE
         Cors:

@@ -59,6 +59,12 @@
       "Resource": "arn:aws:lambda:*:ACCOUNT_ID:function:wedding-website-*"
     },
     {
+      "Sid": "SnsOwnTopics",
+      "Effect": "Allow",
+      "Action": "sns:*",
+      "Resource": "arn:aws:sns:*:ACCOUNT_ID:wedding-website-*"
+    },
+    {
       "Sid": "DynamoDbOwnTables",
       "Effect": "Allow",
       "Action": "dynamodb:*",

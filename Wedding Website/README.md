@@ -60,6 +60,23 @@ aws cloudfront create-invalidation --distribution-id DISTRIBUTION_ID --paths "/*
 
 The site is at the `SiteUrl` output. Repeat the two commands after any edit to `site/`.
 
+## Email notifications
+
+Each RSVP triggers two emails, both best-effort (if one fails, the RSVP is still saved):
+
+- **To you, via SNS:** `NotifyEmail`. After the first deploy AWS emails this address a "Subscription Confirmation" (check spam). Click **Confirm subscription**, otherwise nothing arrives. The message lists the guest's answers, dietary needs, notes, and whether their confirmation email went.
+- **To the guest, via SES:** `SenderEmail`. SNS can't do this: it only emails people who have confirmed a subscription to a topic, so SES is used instead. Leave `SenderEmail` empty to turn guest emails off.
+
+**One-off SES setup** (same AWS region as the stack):
+
+1. SES console, then Identities, then Create identity, then Email address. Click the link AWS emails to verify it. Use this address as `SenderEmail`. An address on a domain you own works far better than gmail.com, yahoo.com or outlook.com addresses, which often land in spam or are rejected when sent through SES.
+2. New SES accounts are in a **sandbox** and can only email verified addresses. Request production access (SES, then Account dashboard, then Request production access): choose Transactional, give your site address, and say you're sending one RSVP confirmation per guest who typed their own email. Approval usually takes about a day.
+3. To test while in the sandbox, verify your own email as a second identity and RSVP with it.
+
+Then `sam deploy --guided` and enter both emails when asked.
+
+Guards: a guest who resubmits within 10 minutes of their last reply gets no second confirmation email (it stops the form being used to send repeated emails to an address). You still get the SNS message. Cost is small: SNS email notifications have a monthly free allowance, and SES is about $0.10 per 1,000 emails. Check current pricing.
+
 ## Changing the password
 
 Run `sam deploy` again and enter the new password. Everyone signed in with the old one is signed out. The password is stored as a Lambda environment variable, visible to anyone with access to your AWS account's Lambda console.
