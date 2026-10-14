@@ -100,6 +100,88 @@ Resources:
         - Protocol: email
           Endpoint: !Ref NotifyEmail
 
+  # ---------- Private admin dashboard ----------
+  AdminUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      MfaConfiguration: OPTIONAL
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+
+  AdminUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref AdminUserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email]
+      CallbackURLs:
+        - !Sub "https://${SiteDistribution.DomainName}/admin.html"
+      LogoutURLs:
+        - !Sub "https://${SiteDistribution.DomainName}/admin.html"
+      SupportedIdentityProviders: [COGNITO]
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+
+  AdminUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${AWS::StackName}-${AWS::AccountId}"
+      UserPoolId: !Ref AdminUserPool
+
+  AdminApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - !Sub "https://${SiteDistribution.DomainName}"
+          - !If [HasCustomDomain, !Sub "https://${CustomDomain}", !Ref AWS::NoValue]
+        AllowMethods: [GET]
+        AllowHeaders: [authorization, content-type]
+      Auth:
+        Authorizers:
+          CognitoAdminAuthorizer:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${AdminUserPool}"
+              audience:
+                - !Ref AdminUserPoolClient
+        DefaultAuthorizer: CognitoAdminAuthorizer
+
+  AdminRsvpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: rsvp/
+      Handler: admin_app.lambda_handler
+      Runtime: python3.12
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RsvpTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: dynamodb:Scan
+              Resource: !GetAtt RsvpTable.Arn
+      Events:
+        GetRsvps:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AdminApi
+            Path: /admin/rsvps
+            Method: GET
+            Auth:
+              Authorizer: CognitoAdminAuthorizer
+
   RsvpFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -154,3 +236,15 @@ Outputs:
   TableName:
     Description: DynamoDB table holding the RSVPs
     Value: !Ref RsvpTable
+  AdminApiUrl:
+    Description: Paste this into site/config.js
+    Value: !Sub "https://${AdminApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+  AdminAuthUrl:
+    Description: Cognito sign-in URL; paste this into site/config.js
+    Value: !Sub "https://${AWS::StackName}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com"
+  AdminUserPoolId:
+    Description: Cognito user pool ID; use this when creating the admin user
+    Value: !Ref AdminUserPool
+  AdminClientId:
+    Description: Cognito app client ID; paste this into site/config.js
+    Value: !Ref AdminUserPoolClient

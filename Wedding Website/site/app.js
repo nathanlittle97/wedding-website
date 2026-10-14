@@ -121,8 +121,10 @@
       }
     });
 
-    root.replaceChildren(h("main", { class: "gate" },
-      h("h1", {}, h("span", {}, "Nathan"), h("span", {}, "& Ashling")), form));
+    root.replaceChildren(
+      h("main", { class: "gate" },
+        h("h1", {}, h("span", {}, "Nathan"), h("span", {}, "& Ashling")), form),
+      h("footer", { class: "gate-foot" }, h("a", { class: "admin-link", href: "admin.html" }, "Admin")));
     first.focus();
   }
 
@@ -149,7 +151,8 @@
           NAV.map(([href, label, id]) => h("a", { href, "aria-current": id === page ? "page" : false }, label)))),
       main,
       h("footer", { class: "foot" },
-        h("p", {}, "Signed in as " + name + ". ", h("button", { type: "button", class: "text-button", onclick: signOut }, "Sign out")))
+        h("p", {}, "Signed in as " + name + ". ", h("button", { type: "button", class: "text-button", onclick: signOut }, "Sign out")),
+        h("a", { class: "admin-link", href: "admin.html" }, "Admin"))
     ];
   }
 

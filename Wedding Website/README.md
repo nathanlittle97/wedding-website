@@ -85,6 +85,25 @@ Run `sam deploy` again and enter the new password. Everyone signed in with the o
 
 `pip install boto3`, then `python tools\export_rsvps.py TABLE_NAME rsvps.csv` (use the `TableName` output). The CSV lists every guest, whether they've replied, their answer for each event, dietary requirements and notes. You can also browse the table in the DynamoDB console.
 
+## Admin dashboard
+
+The small **Admin** link at the bottom of the site opens a dashboard with reply totals, event attendance, guest responses, dietary requirements and notes. It is backed by a separate read-only Lambda API protected by an Amazon Cognito JWT authorizer; it does not use the guest password or the public guest API. The Cognito user pool does not allow public sign-up, so only users you create can sign in. MFA is optional and can be enabled for the user pool.
+
+After deploying the backend:
+
+1. Run `aws cloudformation describe-stacks --stack-name wedding-website --query "Stacks[0].Outputs" --output table` and note `AdminApiUrl`, `AdminAuthUrl`, `AdminClientId` and `AdminUserPoolId`.
+2. Paste the first three values into the corresponding `adminApiUrl`, `adminAuthUrl` and `adminClientId` entries in `site/config.js`.
+3. Create your administrator account (replace the pool ID and email):
+
+   ```powershell
+   aws cognito-idp admin-create-user --user-pool-id USER_POOL_ID --username you@example.com --user-attributes Name=email,Value=you@example.com --desired-delivery-mediums EMAIL
+   ```
+
+   Cognito sends an invitation with a temporary password. At first sign-in, choose a permanent password. You can create additional admin accounts using the same command; there is no public sign-up.
+4. Upload `site/` and invalidate CloudFront as described above. Then open the small **Admin** link and sign in with that email and password.
+
+The dashboard data includes guest contact details and dietary notes. Keep access to the AWS account and administrator accounts private. The API itself is protected even if someone knows its URL or visits `admin.html` directly.
+
 ## Cost and safety
 
 - At wedding-site traffic this should stay within AWS free allowances, but terms vary by account age, so check your Free Tier page. Set a **budget alert** at a few pounds.

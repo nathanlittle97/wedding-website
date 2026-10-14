@@ -64,6 +64,19 @@ a { color: inherit; }
 
 .foot p { margin: 0; }
 
+.admin-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.admin-link:hover { text-decoration: underline; }
+
+.gate-foot { padding: 0 var(--gutter) 1.5rem; }
+
 /* ---------- Home hero and sign-in ---------- */
 
 .hero, .gate {
@@ -265,6 +278,23 @@ button.primary:disabled { opacity: 0.6; cursor: progress; }
 .switch { margin-top: 3.5rem; padding-top: 2.5rem; border-top: 1px solid var(--line); }
 .switch h2 { margin: 0 0 0.5rem; font-weight: 300; font-size: 1.5rem; }
 .switch .hint { margin-bottom: 1.5rem; }
+
+.admin-page { max-width: 100%; }
+.admin-summary { display: flex; flex-wrap: wrap; gap: 1rem 3rem; margin: 2rem 0; }
+.admin-summary p { margin: 0; }
+.admin-summary strong { display: block; font-size: 2rem; font-weight: 400; line-height: 1.2; }
+.admin-events { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 1.5rem 0 2.5rem; }
+.admin-events p { margin: 0; }
+.admin-events strong { font-weight: 400; }
+.admin-tools { max-width: 30rem; margin-bottom: 1.5rem; }
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.admin-table th, .admin-table td { padding: 0.75rem; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+.admin-table th { font-weight: 400; white-space: nowrap; }
+.admin-table td { min-width: 7rem; }
+.admin-table td:first-child { min-width: 10rem; font-weight: 400; }
+.admin-table .admin-detail { min-width: 12rem; white-space: pre-wrap; }
+.admin-signout { margin-left: 1rem; }
 
 @media (max-width: 760px) {
   .row-block { grid-template-columns: 1fr; }
