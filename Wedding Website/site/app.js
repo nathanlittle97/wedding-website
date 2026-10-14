@@ -4,7 +4,6 @@
   const cfg = window.WEDDING_CONFIG || {};
   const page = document.body.dataset.page;
   const root = document.getElementById("root");
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   const TOKEN_KEY = "wedding-token";
   const NAV = [
@@ -80,12 +79,9 @@
     }
   }
 
-  const cleanups = [];
-
   // ---------- sign-in ----------
 
   function showGate() {
-    cleanups.splice(0).forEach((fn) => fn());
     const status = h("p", { class: "status", role: "status", "aria-live": "polite" });
     const first = h("input", { id: "g-first", type: "text", autocomplete: "given-name", maxlength: "60", required: true });
     const last = h("input", { id: "g-last", type: "text", autocomplete: "family-name", maxlength: "60", required: true });
@@ -158,55 +154,22 @@
 
   const pageHead = (title) => h("div", { class: "page-head" }, h("h1", {}, title));
 
-  // ---------- home and slideshow ----------
+  // ---------- home photo background ----------
 
-  function slideshow(slides) {
-    const track = h("div", { class: "slides", tabindex: "0", role: "region", "aria-label": "Photo slideshow" },
-      slides.map((s) => h("figure", { class: "slide" }, h("img", { src: s.src, alt: s.alt || "", loading: "lazy" }))));
-
-    let timer = null;
-    let playing = !reduceMotion;
-
-    const go = (dir) => {
-      const w = track.firstElementChild.offsetWidth + (parseFloat(getComputedStyle(track).columnGap) || 0);
-      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
-      let i = Math.round(track.scrollLeft / w) + dir;
-      if (dir > 0 && atEnd) i = 0;
-      if (i < 0) i = slides.length - 1;
-      track.scrollTo({ left: i * w, behavior: reduceMotion ? "auto" : "smooth" });
-    };
-    const stop = () => { clearInterval(timer); timer = null; };
-    const start = () => { stop(); if (playing) timer = setInterval(() => go(1), 4500); };
-
-    const playBtn = h("button", { type: "button", class: "text-button" }, playing ? "Pause slideshow" : "Play slideshow");
-    playBtn.addEventListener("click", () => {
-      playing = !playing;
-      playBtn.textContent = playing ? "Pause slideshow" : "Play slideshow";
-      start();
-    });
-
-    const wrap = h("section", { class: "slideshow", "aria-label": "Photos" }, track,
-      h("div", { class: "slide-controls" },
-        h("button", { type: "button", class: "text-button", onclick: () => go(-1) }, "Previous"),
-        h("button", { type: "button", class: "text-button", onclick: () => go(1) }, "Next"),
-        playBtn));
-
-    wrap.addEventListener("pointerenter", stop);
-    wrap.addEventListener("pointerleave", start);
-    wrap.addEventListener("focusin", stop);
-    wrap.addEventListener("focusout", start);
-    cleanups.push(stop);
-    start();
-    return wrap;
+  function scrollingBackground(slides) {
+    const imageGroup = () => h("div", { class: "home-photo-group" },
+      slides.map((slide) => h("img", { src: slide.src, alt: "", loading: "eager" })));
+    return h("div", { class: "home-photo-loop", "aria-hidden": "true" },
+      h("div", { class: "home-photo-track" }, imageGroup(), imageGroup()));
   }
 
   function renderHome(data) {
     const home = data.home;
-    return h("main", {},
+    return h("main", { class: "home-main" },
+      home.slides && home.slides.length ? scrollingBackground(home.slides) : null,
       h("section", { class: "hero", "aria-labelledby": "names" },
         h("h1", { id: "names" }, home.names.map((n) => h("span", {}, n))),
-        h("div", { class: "hero-meta" }, h("p", {}, home.date), h("p", {}, home.place))),
-      home.slides && home.slides.length ? slideshow(home.slides) : null);
+        h("div", { class: "hero-meta" }, h("p", {}, home.date), h("p", {}, home.place))));
   }
 
   // ---------- schedule ----------

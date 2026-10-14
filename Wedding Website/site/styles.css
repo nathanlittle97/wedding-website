@@ -86,7 +86,23 @@ a { color: inherit; }
   padding: 3rem var(--gutter) clamp(2.5rem, 7vw, 5rem);
 }
 
-.hero { min-height: 72svh; }
+.home-main {
+  position: relative;
+  isolation: isolate;
+  min-height: 72svh;
+  overflow: hidden;
+}
+
+.home-main::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: rgba(245, 246, 241, 0.58);
+  content: "";
+  pointer-events: none;
+}
+
+.hero { position: relative; z-index: 2; min-height: 72svh; }
 .gate { min-height: 100svh; }
 
 .hero h1, .gate h1 {
@@ -122,33 +138,46 @@ a { color: inherit; }
 .gate form { width: 100%; max-width: 26rem; }
 .gate .lead { max-width: 26rem; }
 
-/* ---------- Slideshow ---------- */
+/* ---------- Home photo background ---------- */
 
-.slideshow { padding: 0 0 clamp(3rem, 8vw, 6rem); }
+.home-photo-loop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
 
-.slides {
+.home-photo-track {
   display: flex;
+  width: max-content;
+  height: 100%;
+  animation: home-photo-scroll 65s linear infinite;
+}
+
+.home-photo-group {
+  display: flex;
+  flex: none;
   gap: 1rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding: 0 var(--gutter);
-  padding: 0 var(--gutter);
-  scrollbar-width: none;
+  height: 100%;
+  padding-right: 1rem;
 }
 
-.slides::-webkit-scrollbar { display: none; }
-
-.slide { flex: 0 0 min(78vw, 52rem); margin: 0; scroll-snap-align: start; }
-
-.slide img {
+.home-photo-group img {
   display: block;
-  width: 100%;
-  aspect-ratio: 3 / 2;
+  flex: none;
+  width: clamp(22rem, 52vw, 48rem);
+  height: 100%;
   object-fit: cover;
-  background: var(--line);
 }
 
-.slide-controls { display: flex; gap: 1.75rem; padding: 1rem var(--gutter) 0; }
+@keyframes home-photo-scroll {
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-photo-track { animation: none; }
+}
 
 /* ---------- Inner pages ---------- */
 
