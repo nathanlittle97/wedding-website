@@ -4,9 +4,11 @@
     "date": "Saturday 2 October 2027",
     "place": "Parr Green Hall, near Malpas, Cheshire",
     "slides": [
-      { "src": "images/slide-1.svg", "alt": "Placeholder photo 1" },
-      { "src": "images/slide-2.svg", "alt": "Placeholder photo 2" },
-      { "src": "images/slide-3.svg", "alt": "Placeholder photo 3" }
+      { "src": "images/slide-1.jpg", "alt": "Engagement photo" },
+      { "src": "images/slide-2.jpg", "alt": "Maddies Wedding" },
+      { "src": "images/slide-3.jpg", "alt": "Canada" },
+      { "src": "images/slide-4.jpg", "alt": "Mull Lighthouse" },
+      { "src": "images/slide-5.jpg", "alt": "Mull Windswept" }
     ]
   },
   "events": [
