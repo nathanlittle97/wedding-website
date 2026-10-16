@@ -19,10 +19,18 @@ Parameters:
   CustomDomain:
     Type: String
     Default: ""
-    Description: Optional. A custom domain (e.g. www.example.com) to allow for RSVP submissions once you attach it to CloudFront.
+    Description: Optional. Your own web address for the site, e.g. www.example.com. Needs CertificateArn too.
+  CertificateArn:
+    Type: String
+    Default: ""
+    AllowedPattern: '^(arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-zA-Z0-9-]+)?$'
+    ConstraintDescription: Must be empty or the ARN of an ACM certificate in the us-east-1 (N. Virginia) region.
+    Description: Optional. ARN of an issued ACM certificate for CustomDomain. It must be in us-east-1, whichever region the stack is in.
 
 Conditions:
-  HasCustomDomain: !Not [!Equals [!Ref CustomDomain, ""]]
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref CustomDomain, ""]]
+    - !Not [!Equals [!Ref CertificateArn, ""]]
 
 Resources:
   # ---------- Static site hosting ----------
@@ -52,6 +60,14 @@ Resources:
         DefaultRootObject: index.html
         HttpVersion: http2and3
         PriceClass: PriceClass_100
+        IPV6Enabled: true
+        Aliases: !If [HasCustomDomain, [!Ref CustomDomain], !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         Origins:
           - Id: site
             DomainName: !GetAtt SiteBucket.RegionalDomainName
@@ -197,7 +213,7 @@ Resources:
           SITE_PASSWORD: !Ref SitePassword
           TOPIC_ARN: !Ref RsvpTopic
           SENDER_EMAIL: !Ref SenderEmail
-          SITE_URL: !Sub "https://${SiteDistribution.DomainName}"
+          SITE_URL: !If [HasCustomDomain, !Sub "https://${CustomDomain}", !Sub "https://${SiteDistribution.DomainName}"]
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RsvpTable
@@ -223,7 +239,10 @@ Resources:
 Outputs:
   SiteUrl:
     Description: Your wedding website address
-    Value: !Sub "https://${SiteDistribution.DomainName}"
+    Value: !If [HasCustomDomain, !Sub "https://${CustomDomain}", !Sub "https://${SiteDistribution.DomainName}"]
+  DnsTarget:
+    Description: Point your domain's CNAME at this (not needed if you used HostedZoneId)
+    Value: !GetAtt SiteDistribution.DomainName
   BucketName:
     Description: Upload the contents of the site folder here
     Value: !Ref SiteBucket

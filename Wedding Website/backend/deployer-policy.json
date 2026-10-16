@@ -107,7 +107,7 @@
         "cognito-idp:UntagResource"
       ],
       "Resource": "arn:aws:cognito-idp:*:ACCOUNT_ID:userpool/*"
-    },
+    },    
     {
       "Sid": "CloudFrontSite",
       "Effect": "Allow",
@@ -130,6 +130,15 @@
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation",
         "cloudfront:ListInvalidations"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AcmReadForCloudFront",
+      "Effect": "Allow",
+      "Action": [
+        "acm:DescribeCertificate",
+        "acm:ListCertificates"
       ],
       "Resource": "*"
     },
