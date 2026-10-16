@@ -13,6 +13,12 @@ from names import guest_key
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TABLE = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
+SNS = boto3.client("sns")
+SES = boto3.client("ses")
+TOPIC_ARN = os.environ.get("TOPIC_ARN", "")
+SENDER = os.environ.get("SENDER_EMAIL", "")
+SITE_URL = os.environ.get("SITE_URL", "")
+RESEND_AFTER = 600  # seconds: at most one guest confirmation email per guest per 10 minutes
 PASSWORD = os.environ["SITE_PASSWORD"]
 SIGNING_KEY = hashlib.sha256(("wedding-token:" + PASSWORD).encode()).digest()
 TOKEN_TTL = 14 * 24 * 3600
@@ -87,6 +93,67 @@ def _public(guest):
     return {"firstName": guest["firstName"], "lastName": guest["lastName"]}
 
 
+# ---------- notifications (best effort: a failure never loses an RSVP) ----------
+
+def _answers(responses):
+    return "\n".join(f"  {e['name']}: {'Yes' if responses[e['id']] else 'No'}" for e in EVENTS if e["id"] in responses)
+
+
+def _email_guest(guest, email, responses, dietary, notes, previous):
+    if not SENDER:
+        return "not configured"
+    if previous and previous.get("updated_at"):
+        try:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(previous["updated_at"])).total_seconds()
+            if age < RESEND_AFTER:
+                return "skipped (they replied again within 10 minutes)"
+        except ValueError:
+            pass
+    lines = [f"Hi {guest['firstName']},", "", "Thank you for your reply. This is what we have for you:", "", _answers(responses), ""]
+    lines.append(f"Dietary requirements: {dietary or 'none given'}")
+    lines.append(f"Other details: {notes or 'none given'}")
+    lines += ["", "If anything changes, send the RSVP form again on the website and your latest reply will replace this one."]
+    if SITE_URL:
+        lines.append(SITE_URL)
+    lines += ["", "Nathan and Ashling"]
+    try:
+        SES.send_email(
+            Source=f"Nathan and Ashling <{SENDER}>",
+            Destination={"ToAddresses": [email]},
+            Message={
+                "Subject": {"Data": "Your RSVP for Nathan and Ashling's wedding", "Charset": "UTF-8"},
+                "Body": {"Text": {"Data": "\n".join(lines), "Charset": "UTF-8"}},
+            },
+        )
+        return "sent"
+    except Exception as err:
+        code = getattr(err, "response", {}).get("Error", {}).get("Code", type(err).__name__)
+        print(f"Guest confirmation failed: {err}")
+        return f"not sent ({code})"
+
+
+def _notify_owner(guest, email, responses, dietary, notes, updated, confirmation):
+    if not TOPIC_ARN:
+        return
+    subject = f"RSVP {'updated' if updated else 'received'}: {guest['firstName']} {guest['lastName']}"
+    subject = " ".join(subject.encode("ascii", "replace").decode().split())[:100]
+    message = "\n".join([
+        f"{guest['firstName']} {guest['lastName']} {'updated their RSVP' if updated else 'sent an RSVP'}.",
+        "",
+        f"Email: {email}",
+        _answers(responses),
+        "",
+        f"Dietary requirements: {dietary or 'none given'}",
+        f"Other details: {notes or 'none given'}",
+        "",
+        f"Confirmation email to guest: {confirmation}",
+    ])
+    try:
+        SNS.publish(TopicArn=TOPIC_ARN, Subject=subject, Message=message)
+    except Exception as err:
+        print(f"Owner notification failed: {err}")
+
+
 # ---------- routes ----------
 
 def login(event):
@@ -157,8 +224,10 @@ def rsvp(event):
             return _resp(400, {"error": "Please say whether you can come to each event."})
         responses[event_id] = sent[event_id]
 
+    dietary = _clean(data.get("dietary"), 500)
+    notes = _clean(data.get("notes"), 1000)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    TABLE.update_item(
+    result = TABLE.update_item(
         Key={"guest": key},
         UpdateExpression=(
             "SET firstName = :f, lastName = :l, email = :e, responses = :r, dietary = :d, "
@@ -166,9 +235,14 @@ def rsvp(event):
         ),
         ExpressionAttributeValues={
             ":f": guest["firstName"], ":l": guest["lastName"], ":e": email, ":r": responses,
-            ":d": _clean(data.get("dietary"), 500), ":n": _clean(data.get("notes"), 1000), ":t": now,
+            ":d": dietary, ":n": notes, ":t": now,
         },
+        ReturnValues="ALL_OLD",
     )
+    previous = result.get("Attributes")
+
+    confirmation = _email_guest(guest, email, responses, dietary, notes, previous)
+    _notify_owner(guest, email, responses, dietary, notes, previous is not None, confirmation)
     return _resp(200, {"ok": True})
 
 

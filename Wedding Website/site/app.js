@@ -6,6 +6,7 @@
   const root = document.getElementById("root");
   const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   const TOKEN_KEY = "wedding-token";
+  const cleanups = [];
   const NAV = [
     ["index.html", "Home", "home"],
     ["schedule.html", "Schedule", "schedule"],

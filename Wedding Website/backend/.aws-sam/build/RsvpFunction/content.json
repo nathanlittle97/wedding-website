@@ -4,51 +4,53 @@
     "date": "Saturday 2 October 2027",
     "place": "Parr Green Hall, near Malpas, Cheshire",
     "slides": [
-      { "src": "images/slide-1.svg", "alt": "Placeholder photo 1" },
-      { "src": "images/slide-2.svg", "alt": "Placeholder photo 2" },
-      { "src": "images/slide-3.svg", "alt": "Placeholder photo 3" }
+      { "src": "images/slide-1.jpg", "alt": "Engagement photo" },
+      { "src": "images/slide-2.jpg", "alt": "Maddies Wedding" },
+      { "src": "images/slide-3.jpg", "alt": "Canada" },
+      { "src": "images/slide-4.jpg", "alt": "Mull Lighthouse" },
+      { "src": "images/slide-5.jpg", "alt": "Mull Windswept" }
     ]
   },
   "events": [
     {
       "id": "welcome",
       "order": 1,
-      "name": "Welcome meal",
-      "date": "",
-      "time": "",
-      "place": "",
-      "description": ""
+      "name": "Welcome Meal",
+      "date": "Friday 1 October 2027",
+      "time": "7pm-10pm",
+      "place": "Parr Green Hall, Tilston, Malpas, Cheshire, SY14 7BJ",
+      "description": "Please join us for a low-key meal with our closest family members"
     },
     {
       "id": "wedding",
       "order": 2,
-      "name": "The wedding",
+      "name": "Our Wedding",
       "date": "Saturday 2 October 2027",
-      "time": "",
-      "place": "Parr Green Hall, near Malpas, Cheshire",
-      "description": ""
+      "time": "Ceremony starts at midday - Carriages at midnight ",
+      "place": "Parr Green Hall, Tilston, Malpas, Cheshire, SY14 7BJ",
+      "description": "The main event! Ceremony, wedding breakfast, cocktails and dancing!"
     },
     {
       "id": "brunch",
       "order": 3,
       "name": "Brunch",
       "date": "Sunday 3 October 2027",
-      "time": "",
-      "place": "",
-      "description": ""
+      "time": "From 10:30am",
+      "place": "Parr Green Hall, Tilston, Malpas, Cheshire, SY14 7BJ",
+      "description": "Swing by the next day for breakfast sandwiches and a catchup before you leave"
     }
   ],
   "accommodation": {
     "venue": {
       "name": "Parr Green Hall",
-      "address": ["Parr Green Hall", "near Malpas", "Cheshire"],
-      "postcode": "",
-      "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Parr+Green+Hall+Malpas+Cheshire"
+      "address": ["Parr Green Hall", "Tilston", "Malpas", "Cheshire"],
+      "postcode": "SY14 7BJ",
+      "mapsUrl": "https://maps.app.goo.gl/YAKWAJVRucooLmjs8"
     },
     "sections": [
       {
         "title": "Parking",
-        "paragraphs": ["Parking details will be added here."],
+        "paragraphs": ["There is plenty of parking at the venue. Cars can be left overnight if you decide to drive."],
         "items": []
       },
       {
@@ -66,7 +68,7 @@
   "faqs": [
     {
       "q": "How do I reply?",
-      "a": "Use the RSVP page. You'll see only the events you're invited to, and you can tell us your dietary requirements and anything else we should know."
+      "a": "Use the RSVP page. You can tell us your dietary requirements and anything else we should know."
     },
     {
       "q": "How do I reply for my partner or family?",
@@ -78,11 +80,11 @@
     },
     {
       "q": "What should I wear?",
-      "a": "Details to follow."
+      "a": "No specific dresscode."
     },
     {
-      "q": "Are children welcome?",
-      "a": "Details to follow."
+      "q": "Can I bring a plus one or children?",
+      "a": "Due to venue capacity only named guests are invited."
     }
   ]
 }

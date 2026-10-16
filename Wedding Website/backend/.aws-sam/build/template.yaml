@@ -7,17 +7,40 @@ Parameters:
     NoEcho: true
     MinLength: 6
     Description: The single password all guests use to enter the site.
+  NotifyEmail:
+    Type: String
+    MinLength: 3
+    Description: Your email address. You get a message for each RSVP (AWS emails you
+      a link to confirm after deploying).
+  SenderEmail:
+    Type: String
+    Default: ''
+    Description: Optional. An SES-verified address that sends confirmation emails
+      to guests. Leave empty to turn guest emails off.
   CustomDomain:
     Type: String
     Default: ''
-    Description: Optional. A custom domain (e.g. www.example.com) to allow for RSVP
-      submissions once you attach it to CloudFront.
+    Description: Optional. Your own web address for the site, e.g. www.example.com.
+      Needs CertificateArn too.
+  CertificateArn:
+    Type: String
+    Default: ''
+    AllowedPattern: ^(arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-zA-Z0-9-]+)?$
+    ConstraintDescription: Must be empty or the ARN of an ACM certificate in the us-east-1
+      (N. Virginia) region.
+    Description: Optional. ARN of an issued ACM certificate for CustomDomain. It must
+      be in us-east-1, whichever region the stack is in.
 Conditions:
   HasCustomDomain:
-    Fn::Not:
-    - Fn::Equals:
-      - Ref: CustomDomain
-      - ''
+    Fn::And:
+    - Fn::Not:
+      - Fn::Equals:
+        - Ref: CustomDomain
+        - ''
+    - Fn::Not:
+      - Fn::Equals:
+        - Ref: CertificateArn
+        - ''
 Resources:
   SiteBucket:
     Type: AWS::S3::Bucket
@@ -44,6 +67,20 @@ Resources:
         DefaultRootObject: index.html
         HttpVersion: http2and3
         PriceClass: PriceClass_100
+        IPV6Enabled: true
+        Aliases:
+          Fn::If:
+          - HasCustomDomain
+          - - Ref: CustomDomain
+          - Ref: AWS::NoValue
+        ViewerCertificate:
+          Fn::If:
+          - HasCustomDomain
+          - AcmCertificateArn:
+              Ref: CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         Origins:
         - Id: site
           DomainName:
@@ -89,6 +126,114 @@ Resources:
       KeySchema:
       - AttributeName: guest
         KeyType: HASH
+  RsvpTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Protocol: email
+        Endpoint:
+          Ref: NotifyEmail
+  AdminUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AutoVerifiedAttributes:
+      - email
+      UsernameAttributes:
+      - email
+      MfaConfiguration: OPTIONAL
+      EnabledMfas:
+      - SOFTWARE_TOKEN_MFA
+  AdminUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId:
+        Ref: AdminUserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+      - code
+      AllowedOAuthScopes:
+      - openid
+      - email
+      CallbackURLs:
+      - Fn::Sub: https://${SiteDistribution.DomainName}/admin.html
+      LogoutURLs:
+      - Fn::Sub: https://${SiteDistribution.DomainName}/admin.html
+      SupportedIdentityProviders:
+      - COGNITO
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+  AdminUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain:
+        Fn::Sub: ${AWS::StackName}-${AWS::AccountId}
+      UserPoolId:
+        Ref: AdminUserPool
+  AdminApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+        - Fn::Sub: https://${SiteDistribution.DomainName}
+        - Fn::If:
+          - HasCustomDomain
+          - Fn::Sub: https://${CustomDomain}
+          - Ref: AWS::NoValue
+        AllowMethods:
+        - GET
+        AllowHeaders:
+        - authorization
+        - content-type
+      Auth:
+        Authorizers:
+          CognitoAdminAuthorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer:
+                Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/${AdminUserPool}
+              audience:
+              - Ref: AdminUserPoolClient
+        DefaultAuthorizer: CognitoAdminAuthorizer
+  AdminRsvpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: AdminRsvpFunction
+      Handler: admin_app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - arm64
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: RsvpTable
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action: dynamodb:Scan
+          Resource:
+            Fn::GetAtt:
+            - RsvpTable
+            - Arn
+      Events:
+        GetRsvps:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: AdminApi
+            Path: /admin/rsvps
+            Method: GET
+            Auth:
+              Authorizer: CognitoAdminAuthorizer
+    Metadata:
+      SamResourceId: AdminRsvpFunction
   RsvpFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -105,10 +250,32 @@ Resources:
             Ref: RsvpTable
           SITE_PASSWORD:
             Ref: SitePassword
+          TOPIC_ARN:
+            Ref: RsvpTopic
+          SENDER_EMAIL:
+            Ref: SenderEmail
+          SITE_URL:
+            Fn::If:
+            - HasCustomDomain
+            - Fn::Sub: https://${CustomDomain}
+            - Fn::Sub: https://${SiteDistribution.DomainName}
       Policies:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: RsvpTable
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - RsvpTopic
+            - TopicName
+      - Statement:
+        - Effect: Allow
+          Action: ses:SendEmail
+          Resource: '*'
+          Condition:
+            StringEquals:
+              ses:FromAddress:
+                Ref: SenderEmail
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -131,7 +298,16 @@ Outputs:
   SiteUrl:
     Description: Your wedding website address
     Value:
-      Fn::Sub: https://${SiteDistribution.DomainName}
+      Fn::If:
+      - HasCustomDomain
+      - Fn::Sub: https://${CustomDomain}
+      - Fn::Sub: https://${SiteDistribution.DomainName}
+  DnsTarget:
+    Description: Point your domain's CNAME at this (not needed if you used HostedZoneId)
+    Value:
+      Fn::GetAtt:
+      - SiteDistribution
+      - DomainName
   BucketName:
     Description: Upload the contents of the site folder here
     Value:
@@ -150,3 +326,19 @@ Outputs:
     Description: DynamoDB table holding the RSVPs
     Value:
       Ref: RsvpTable
+  AdminApiUrl:
+    Description: Paste this into site/config.js
+    Value:
+      Fn::Sub: https://${AdminApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  AdminAuthUrl:
+    Description: Cognito sign-in URL; paste this into site/config.js
+    Value:
+      Fn::Sub: https://${AWS::StackName}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com
+  AdminUserPoolId:
+    Description: Cognito user pool ID; use this when creating the admin user
+    Value:
+      Ref: AdminUserPool
+  AdminClientId:
+    Description: Cognito app client ID; paste this into site/config.js
+    Value:
+      Ref: AdminUserPoolClient

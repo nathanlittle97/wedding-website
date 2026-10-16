@@ -4,11 +4,11 @@ version = 0.1
 stack_name = "wedding-website"
 resolve_s3 = true
 s3_prefix = "wedding-website"
-region = "eu-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "CustomDomain=\"\""
+parameter_overrides = "NotifyEmail=\"nathanlittle1224@hotmail.co.uk\" SenderEmail=\"\" CustomDomain=\"www.nathanandashwedding.com\" CertificateArn=\"arn:aws:acm:us-east-1:396608808365:certificate/8e562b5e-7d55-4cee-9106-7501dafc1116\""
 image_repositories = []
+disable_rollback = true
 
 [default.global.parameters]
 region = "eu-west-2"
